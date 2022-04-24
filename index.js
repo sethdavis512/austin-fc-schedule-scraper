@@ -19,25 +19,31 @@ const puppeteer = require('puppeteer');
     await page.waitForTimeout(5000);
 
     const scheduleData = await page.evaluate(() => {
+        const extractInnerText = (element, selector) => {
+            const queriedItem = element.querySelector(selector);
+
+            return queriedItem && queriedItem.innerText;
+        };
+
         const allGameRowsNodeList =
             document.querySelectorAll('.mls-o-match-strip');
 
         const scheduleMeta = [...allGameRowsNodeList].map((row, rowIndex) => {
-            const formattedDate = row.querySelector(
-                '.mls-o-match-strip__time'
-            ).innerText;
-            const homeTeam = row.querySelector(
+            const timeNodes = row.querySelectorAll('.mls-o-match-strip__time');
+            const rowTimes = [...timeNodes];
+            const formattedDate = rowTimes[0] ? rowTimes[0].innerText : null;
+            const startTime = rowTimes[1] ? rowTimes[1].innerText : null;
+
+            const homeTeam = extractInnerText(
+                row,
                 '.mls-o-match-strip__club--home .mls-o-match-strip__club-short-name'
-            ).innerText;
-            const awayTeam = row.querySelector(
+            );
+            const awayTeam = extractInnerText(
+                row,
                 '.mls-o-match-strip__club--away .mls-o-match-strip__club-short-name'
-            ).innerText;
-            const venue = row.querySelector(
-                '.mls-o-match-strip__venue'
-            ).innerText;
-            const startTime = row.querySelector(
-                '.mls-o-match-strip__club-separator'
-            ).innerText;
+            );
+            const venue = extractInnerText(row, '.mls-o-match-strip__venue');
+            const score = extractInnerText(row, '.mls-o-match-strip__score');
 
             const broadcastersNodeList = row.querySelectorAll(
                 '.mls-o-match-strip__broadcaster'
@@ -53,18 +59,22 @@ const puppeteer = require('puppeteer');
                 awayTeam,
                 venue,
                 broadcasters,
-                startTime
+                startTime,
+                score
             };
         });
 
         return scheduleMeta;
     });
 
-    const destination = '/Users/seth/repositories/portfolio/app/data/2022-austin-fc-schedule.json';
+    const destination =
+        '/Users/seth/repositories/portfolio/app/data/2022-austin-fc-schedule.json';
     const writeFileCallback = (err) => {
         if (err) return console.log(err);
         console.log('✅ File successfully written');
     };
+
+    console.log(JSON.stringify(scheduleData));
 
     await fs.writeFile(
         destination,
